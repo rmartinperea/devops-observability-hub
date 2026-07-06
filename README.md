@@ -1,6 +1,6 @@
 #  DevOps Observability Hub: Laboratorio de Monitoreo & Hardening
 
-¡Bienvenido! Este es un laboratorio local de **Infraestructura como Código (IaC)** y **Observabilidad**. Está diseñado para simular cómo funciona el monitoreo de servidores en el mundo real, manejando bases de datos relacionales, telemetría automática y, lo más importante, aplicando capas de seguridad para proteger el entorno contra accesos no autorizados.
+Este es un laboratorio local de **Infraestructura como Código (IaC)** y **Observabilidad**. Está diseñado para simular cómo funciona el monitoreo de servidores en el mundo real, manejando bases de datos relacionales, telemetría automática y, lo más importante, aplicando capas de seguridad para proteger el entorno contra accesos no autorizados.
 
 ---
 
@@ -39,31 +39,31 @@ Para proteger los datos sensibles, **hemos aislado la red por dentro**, lo que s
 1. **Capa de Visualización (Grafana):** Nuestro panel de control centralizado. Es el único punto expuesto hacia tu máquina y se conecta con un bot de **Slack (ChatOps)** para avisar al equipo al instante si algo falla.
 2. **Motor de Telemetría (Prometheus):** La base de datos de series temporales (TSDB) que traga e indexa todas las métricas de rendimiento.
 3. **Capa de Datos (PostgreSQL + pgAdmin):** Almacenamiento persistente que simula la base de datos de negocio de una empresa real.
-4. **Simulador Autónomo de Estrés (Bash + Dockerfile):** Un microservicio "gamberro" programado por nosotros que corre de fondo inyectando picos de CPU al 99% y caídas de servicio (`DOWN`) para poner a prueba las alertas.
+4. **Simulador Autónomo de Estrés (Bash + Dockerfile):** Un microservicio programado por nosotros que corre de fondo inyectando picos de CPU al 99% y caídas de servicio (`DOWN`) para poner a prueba las alertas.
 5. **Agentes de Recolección (cAdvisor + Node Exporter):** Los ojos del sistema. `cAdvisor` vigila el consumo interno de cada contenedor y `Node Exporter` mide el tráfico de red general.
 
 ---
 
 ##  Buenas Prácticas de Seguridad Implementadas (Hardening)
 
-Un error típico de Sysadmin principiante es dejar todos los puertos abiertos. En este laboratorio hemos blindado la seguridad con estándares corporativos:
+Un error típico es dejar todos los puertos abiertos. En este laboratorio he blindado la seguridad con estándares corporativos:
 
-* **Principio de Menor Privilegio (Bloqueo de Puertos):** Borramos las directivas `ports` hacia el exterior en PostgreSQL, Prometheus, cAdvisor y Node Exporter. Ya nadie desde fuera de tu máquina (ni de tu red WiFi) puede meterse a husmear o borrar datos. Todo el tráfico viaja aislado por la red de Docker.
+* **Principio de Menor Privilegio (Bloqueo de Puertos):** Borramos las directivas `ports` hacia el exterior en PostgreSQL, Prometheus, cAdvisor y Node Exporter. Todo el tráfico viaja aislado por la red de Docker.
 * **Protección contra Llenado de Disco (Anti-DoS):** Limitamos por comandos la retención de Prometheus (`--storage.tsdb.retention.size=5GB` y `7d`). Así evitamos que un ataque o un bug llene el disco duro del servidor y tumbe el sistema [^1].
 
 ---
 
 ##  Métricas Clave Diseñadas (PromQL & SQL)
 
-Para que los paneles de Grafana cobren vida, diseñamos consultas optimizadas que traducen datos planos en gráficas interactivas:
+Para que los paneles de Grafana he diseñado las siguientes gráficas interactivas:
 
 * **Velocidad de Escritura en Disco por Contenedores (MB/s):**
-  Como los entornos virtuales a veces bloquean las métricas de disco tradicionales, usamos esta fórmula inteligente que aprovecha cAdvisor para medir los Megabytes reales que escriben tus contenedores por segundo:
+Como los entornos virtuales a veces bloquean las métricas de disco tradicionales, he usado esta fórmula inteligente que aprovecha cAdvisor para medir los Megabytes reales que escriben tus contenedores por segundo:
   ```promql
   sum(rate(container_fs_writes_bytes_total[5m])) / 1024 / 1024
   ```
 * **Estado de Salud de los Nodos (Up/Down):**
-  Consulta básica para comprobar en tiempo real qué contenedores están vivos (`1`) y cuáles han caído (`0`):
+  Consulta para comprobar en tiempo real qué contenedores están vivos (`1`) y cuáles han caído (`0`):
   ```promql
   up
   ```
