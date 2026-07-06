@@ -1,68 +1,17 @@
-# devops-observability-hub
-Laboratorio local de IaC y Observabilidad para Sysadmin. Gestiona persistencia de bases de datos relacionales y automatiza la recolección de telemetría con Prometheus y cAdvisor. Incluye paneles dinámicos en Grafana para analizar el rendimiento del sistema ante picos de estrés simulados. Arquitectura y código disponibles en el repositorio.
+#  DevOps Observability Hub: Laboratorio de Monitoreo & Hardening
 
-
-# Laboratorio de Observabilidad y Monitoreo de Infraestructura con Docker
-
-Este repositorio contiene un entorno de telemetría profesional completamente contenedorizado, diseñado para la recolección, almacenamiento y visualización de métricas de sistemas en tiempo real. Combina la monitorización de bases de datos relacionales y el estándar industrial de bases de datos de series temporales (TSDB).
-
-## Arquitectura del Sistema
-
-El proyecto despliega una arquitectura desacoplada mediante microservicios orquestados:
-
-*   **Capa de Visualización (Grafana):** Panel de control centralizado con visualización analítica.
-*   **Capa de Telemetría (Prometheus + Google cAdvisor):** Recolección automatizada y almacenamiento eficiente (TSDB) de los signos vitales reales (CPU/Memoria) del hardware y contenedores.
-*   **Capa de Datos de Aplicación (PostgreSQL + pgAdmin):** Almacenamiento persistente de datos del negocio y administración visual de bases de datos relacionales.
-*   **Capa de Automatización (Simulador Bash/Dockerfile):** Un microservicio propio que inyecta de forma autónoma métricas lógicas y simula incidentes críticos (estrés de CPU y caídas de servicio) para validar la reactividad del monitoreo.
-
-##  Tecnologías Utilizadas
-
-*   **Orquestación:** Docker, Docker Compose, Dockerfile
-*   **Monitoreo:** Prometheus (PromQL), Google cAdvisor
-*   **Bases de Datos:** PostgreSQL (SQL, Time Series), pgAdmin4
-*   **Visualización:** Grafana (Dashboards as Code)
-*   **Automatización:** Bash Scripting (Linux)
-
-##  Estructura del Proyecto
-
-```text
-├── docker-compose.yml       # Orquestación de toda la infraestructura de red y servicios
-├── Dockerfile               # Compilación del contenedor autónomo del simulador
-├── simulador.sh             # Script de automatización de cargas e incidentes lógicos
-├── prometheus.yml           # Configuración del intervalo de scrape y targets de telemetría
-└── dashboard-infraestructura.json # Respaldo del Dashboard de Grafana listo para importar
-```
-
-##  Instrucciones de Despliegue
-
-1. Clona este repositorio en tu máquina local.
-2. Ejecuta el siguiente comando para compilar el simulador y levantar toda la infraestructura en segundo plano:
-   ```bash
-   docker compose up -d --build
-   ```
-3. Accede a las interfaces web locales:
-   * **Grafana:** `http://localhost:3000` (Credenciales por defecto: `admin` / `admin`)
-   * **pgAdmin:** `http://localhost:8080` (O el puerto configurado)
-   * **Prometheus Targets:** `http://localhost:9090/targets`
-
-##  Capacidades Demostradas en este Lab
-
-
-
-
-
-#  Enterprise Observability Lab & Infrastructure Hardening
-
-Proyecto de infraestructura automatizada para la monitorización de servidores, simulación de estrés y securización de redes internas utilizando contenedores Docker. Diseñado bajo estándares profesionales de Sysadmin y DevOps para entornos de alta disponibilidad.
+¡Bienvenido! Este es un laboratorio local de **Infraestructura como Código (IaC)** y **Observabilidad**. Está diseñado para simular cómo funciona el monitoreo de servidores en el mundo real, manejando bases de datos relacionales, telemetría automática y, lo más importante, aplicando capas de seguridad para proteger el entorno contra accesos no autorizados.
 
 ---
 
-## 🛠️ Arquitectura del Sistema
+##  Arquitectura del Sistema
 
-El proyecto despliega un ecosistema compuesto por 7 microservicios interconectados a través de una red privada virtual de Docker (`red-infraestructura`), aislando los datos sensibles del exterior.
+El proyecto levanta un ecosistema de **7 microservicios** totalmente interconectados a través de una red privada virtual de Docker (`red-infraestructura`). 
+
+Para proteger los datos sensibles, **hemos aislado la red por dentro**, lo que significa que los servicios hablan entre sí en secreto y el único que da la cara al exterior es Grafana.
 
 ```text
-       [ Navegador Web ]
+       [ Tu Navegador Web ]
                │  (Puerto 3000 protegido / Grafana)
                ▼
       ┌────────────────────────────────────────────────────────┐
@@ -76,68 +25,77 @@ El proyecto despliega un ecosistema compuesto por 7 microservicios interconectad
       │         ▼                              ▼           ▼   │
       │  ┌───────────────┐              ┌─────────────┐ ┌─────────────┐
       │  │  PostgreSQL   │              │  cAdvisor   │ │Node Exporter│
-      │  │ (Transacciones│              │(Contenedores)││ (Host/Red)  │
+      │  │ (Transacciones│              │(Contenedores)││  (Host/Red) │
       │  └──────▲────────┘              └─────────────┘ └─────────────┘
       │         │                                              │
       │  ┌──────┴────────┐                                     │
       │  │ Simulador CPU │ (Inyección de Picos)                │
-      │  └───────────────┘                                     │
+      │  └───────────-───┘                                     │
       └────────────────────────────────────────────────────────┘
 ```
 
 ### Componentes de la Infraestructura
-1. **Visualización y Alertas (Grafana):** Único punto de acceso expuesto al host. Consolida los paneles métricos y se integra con Slack para ChatOps.
-2. **Motor de Métricas (Prometheus):** Base de datos de series temporales (TSDB) configurada con políticas estrictas de retención (máximo 7 días o 5 GB) para blindar el almacenamiento del servidor.
-3. **Persistencia de Negocio (PostgreSQL + pgAdmin):** Almacenamiento relacional que simula el backend corporativo, integrado de forma interna en la red.
-4. **Simulador Autónomo de Estrés (Bash + Docker):** Inyecta de forma automatizada picos lógicos de estrés en el procesador (CPU 99%) y caídas programadas del servicio para evaluar la resiliencia del sistema.
-5. **Agentes de Recolección (cAdvisor + Node Exporter):** Monitorizan en tiempo real el consumo de hardware de los contenedores y el tráfico de red de la infraestructura.
+
+1. **Capa de Visualización (Grafana):** Nuestro panel de control centralizado. Es el único punto expuesto hacia tu máquina y se conecta con un bot de **Slack (ChatOps)** para avisar al equipo al instante si algo falla.
+2. **Motor de Telemetría (Prometheus):** La base de datos de series temporales (TSDB) que traga e indexa todas las métricas de rendimiento.
+3. **Capa de Datos (PostgreSQL + pgAdmin):** Almacenamiento persistente que simula la base de datos de negocio de una empresa real.
+4. **Simulador Autónomo de Estrés (Bash + Dockerfile):** Un microservicio "gamberro" programado por nosotros que corre de fondo inyectando picos de CPU al 99% y caídas de servicio (`DOWN`) para poner a prueba las alertas.
+5. **Agentes de Recolección (cAdvisor + Node Exporter):** Los ojos del sistema. `cAdvisor` vigila el consumo interno de cada contenedor y `Node Exporter` mide el tráfico de red general.
 
 ---
 
 ##  Buenas Prácticas de Seguridad Implementadas (Hardening)
 
-* **Principio de Menor Privilegio (Aislamiento de Puertos):** Se han eliminado las directivas `ports` hacia el sistema host en PostgreSQL, Prometheus, cAdvisor y Node Exporter. El tráfico viaja exclusivamente de forma interna dentro de la red aislada de Docker.
-* **Mitigación de Denegación de Servicio (DoS) por Almacenamiento:** Configuración de límites máximos en la retención de métricas de Prometheus (`--storage.tsdb.retention.size=5GB`) previniendo el llenado accidental o malicioso del disco del servidor.
+Un error típico de Sysadmin principiante es dejar todos los puertos abiertos. En este laboratorio hemos blindado la seguridad con estándares corporativos:
+
+* **Principio de Menor Privilegio (Bloqueo de Puertos):** Borramos las directivas `ports` hacia el exterior en PostgreSQL, Prometheus, cAdvisor y Node Exporter. Ya nadie desde fuera de tu máquina (ni de tu red WiFi) puede meterse a husmear o borrar datos. Todo el tráfico viaja aislado por la red de Docker.
+* **Protección contra Llenado de Disco (Anti-DoS):** Limitamos por comandos la retención de Prometheus (`--storage.tsdb.retention.size=5GB` y `7d`). Así evitamos que un ataque o un bug llene el disco duro del servidor y tumbe el sistema [^1].
 
 ---
 
-##  Métricas Clave Diseñadas (PromQL)
+##  Métricas Clave Diseñadas (PromQL & SQL)
 
-Para la monitorización avanzada en Grafana se implementaron paneles basados en las siguientes consultas:
+Para que los paneles de Grafana cobren vida, diseñamos consultas optimizadas que traducen datos planos en gráficas interactivas:
 
 * **Velocidad de Escritura en Disco por Contenedores (MB/s):**
+  Como los entornos virtuales a veces bloquean las métricas de disco tradicionales, usamos esta fórmula inteligente que aprovecha cAdvisor para medir los Megabytes reales que escriben tus contenedores por segundo:
   ```promql
   sum(rate(container_fs_writes_bytes_total[5m])) / 1024 / 1024
   ```
 * **Estado de Salud de los Nodos (Up/Down):**
+  Consulta básica para comprobar en tiempo real qué contenedores están vivos (`1`) y cuáles han caído (`0`):
   ```promql
   up
   ```
 
 ---
 
-##  Despliegue Rápido (Quickstart)
+##  Capacidades Demostradas en este Lab
 
-### Requisitos Previos
-* Docker y Docker Compose
-* Entorno Linux / WSL2 (Windows Subsystem for Linux)
-
-### Instrucciones
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com
-   cd TU_REPOSITORIO
-   ```
-2. Levanta toda la infraestructura blindada en segundo plano con un solo comando:
-   ```bash
-   docker compose up -d --remove-orphans
-   ```
-3. Accede a los paneles de monitorización ingresando en tu navegador a: `http://localhost:3000` (Grafana).
+* **Infraestructura como Código (IaC):** Despliegue limpio y repetible mediante Docker Compose, usando volúmenes persistentes para no perder datos al apagar.
+* **DNS Interno de Docker:** Conexión segura entre servicios usando sus nombres de contenedor en lugar de IPs estáticas que cambian todo el tiempo.
+* **Gestión de Incidentes:** Simulación real de picos de carga (Thresholds) y caídas de servidores para configurar alertas visuales inteligentes en color.
 
 ---
 
+##  Despliegue Rápido (Quickstart)
 
-*   **Infraestructura como Código (IaC):** Despliegue reproducible de entornos mediante Docker Compose con redes virtuales dedicadas y volúmenes persistentes para evitar la pérdida de datos.
-*   **DNS Interno de Docker:** Interconexión de servicios utilizando resolución de nombres de contenedores en lugar de IPs estáticas.
-*   **Monitoreo con PromQL y SQL:** Creación de consultas optimizadas para formatear datos en series temporales independientes por servidor.
-*   **Gestión de Incidentes:** Simulación de picos de carga (Thresholds) y caídas de nodos para pruebas de estrés de los sistemas de alertas visuales.
+### Requisitos Previos
+* Docker y Docker Compose instalados.
+* Funciona perfectamente en entornos Linux o **WSL2 (Windows Subsystem for Linux)** [^1].
+
+### Instrucciones
+1. Clona este repositorio en tu máquina:
+   ```bash
+   git clone https://github.com
+   cd devops-observability-hub
+   ```
+2. Compila el simulador y levanta toda la infraestructura blindada en segundo plano con un solo comando:
+   ```bash
+   docker compose up -d --remove-orphans
+   ```
+3. Entra a tu navegador y disfruta del monitoreo:
+   * **Grafana (Paneles):** `http://localhost:3000` (Usuario/Contraseña por defecto: `admin` / `admin`)
+   * *(Nota: Intentar entrar a Prometheus en el puerto 9090 o cAdvisor en el 8080 dará conexión rechazada debido al bloqueo de seguridad implementado).*
+
+---
