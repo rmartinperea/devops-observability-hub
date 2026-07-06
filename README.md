@@ -11,7 +11,7 @@ El proyecto levanta un ecosistema de **7 microservicios** totalmente interconect
 Para proteger los datos sensibles, **hemos aislado la red por dentro**, lo que significa que los servicios hablan entre sí en secreto y el único que da la cara al exterior es Grafana.
 
 ```text
-       [ Tu Navegador Web ]
+       [ Navegador Web ]
                │  (Puerto 3000 protegido / Grafana)
                ▼
       ┌────────────────────────────────────────────────────────┐
