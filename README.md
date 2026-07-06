@@ -94,14 +94,14 @@ El proyecto despliega un ecosistema compuesto por 7 microservicios interconectad
 
 ---
 
-## 🔒 Buenas Prácticas de Seguridad Implementadas (Hardening)
+##  Buenas Prácticas de Seguridad Implementadas (Hardening)
 
 * **Principio de Menor Privilegio (Aislamiento de Puertos):** Se han eliminado las directivas `ports` hacia el sistema host en PostgreSQL, Prometheus, cAdvisor y Node Exporter. El tráfico viaja exclusivamente de forma interna dentro de la red aislada de Docker.
 * **Mitigación de Denegación de Servicio (DoS) por Almacenamiento:** Configuración de límites máximos en la retención de métricas de Prometheus (`--storage.tsdb.retention.size=5GB`) previniendo el llenado accidental o malicioso del disco del servidor.
 
 ---
 
-## 📊 Métricas Clave Diseñadas (PromQL)
+##  Métricas Clave Diseñadas (PromQL)
 
 Para la monitorización avanzada en Grafana se implementaron paneles basados en las siguientes consultas:
 
@@ -116,7 +116,7 @@ Para la monitorización avanzada en Grafana se implementaron paneles basados en 
 
 ---
 
-## 🚀 Despliegue Rápido (Quickstart)
+##  Despliegue Rápido (Quickstart)
 
 ### Requisitos Previos
 * Docker y Docker Compose
