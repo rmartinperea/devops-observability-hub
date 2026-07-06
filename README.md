@@ -97,5 +97,14 @@ Como los entornos virtuales a veces bloquean las métricas de disco tradicionale
 3. Entra a tu navegador y disfruta del monitoreo:
    * **Grafana (Paneles):** `http://localhost:3000` (Usuario/Contraseña por defecto: `admin` / `admin`)
    * *(Nota: Intentar entrar a Prometheus en el puerto 9090 o cAdvisor en el 8080 dará conexión rechazada debido al bloqueo de seguridad implementado).*
+  
+  
+4. ##  Solución de Problemas Frecuentes (Troubleshooting)
+
+* **¿Por qué las métricas de disco de Node Exporter dan "No Data" en WSL/Windows?**
+  WSL2 aísla el sistema de archivos mediante hipervisores, impidiendo que los contenedores accedan a las métricas del host directamente. En este laboratorio mitigamos este comportamiento sustituyendo la métrica tradicional por telemetría nativa de contenedores mediante **cAdvisor** (`container_fs_writes_bytes_total`).
+* **Grafana da error al conectar con Prometheus:**
+  Asegúrate de que la URL en el Data Source de Grafana sea `http://devops_prometheus:9090`. No uses `localhost`, ya que dentro de la red interna de Docker, `localhost` apuntaría a la propia Grafana.
+
 
 ---
