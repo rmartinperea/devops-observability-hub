@@ -8,7 +8,7 @@ Este es un laboratorio local de **Infraestructura como Código (IaC)** y **Obser
 
 El proyecto levanta un ecosistema de **7 microservicios** totalmente interconectados a través de una red privada virtual de Docker (`red-infraestructura`). 
 
-Para proteger los datos sensibles, **hemos aislado la red por dentro**, lo que significa que los servicios hablan entre sí en secreto y el único que da la cara al exterior es Grafana.
+Para proteger los datos sensibles, **he aislado la red por dentro**, lo que significa que los servicios hablan entre sí en secreto y el único que da la cara al exterior es Grafana.
 
 ```text
        [ Navegador Web ]
