@@ -1,0 +1,135 @@
+
+services:
+  # Nuestro servicio de Base de Datos
+  db:
+    image: postgres:15-alpine
+    container_name: devops_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: mi_app_db
+    #ports:
+    #  - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    networks:
+      - red-infraestructura
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter
+    environment:
+      # Conectamos con el usuario 'admin', la clave '1234', al servicio 'db' y a la base de datos 'mi_app_db'
+      DATA_SOURCE_NAME: "postgresql://admin:1234@db:5432/mi_app_db?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - db # Apunta exactamente al nombre de tu servicio de arriba
+    networks:
+      - red-infraestructura # OBLIGATORIO: Deben compartir la misma red para verse
+
+
+# Nuestro servicio web
+  web-app:
+    image: dpage/pgadmin4
+    container_name: devops_pgadmin
+    restart: always
+    volumes:
+      - ./pgadmin-data:/var/lib/pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: Home_Lab_en_Docker@infra.com
+      PGADMIN_DEFAULT_PASSWORD: 1234
+    ports:
+      - "8080:80"
+    networks:
+      - red-infraestructura
+    depends_on:
+      - db
+
+  # 3. cAdvisor: El recolector de métricas de contenedores
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: devops_cadvisor
+    restart: always
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - red-infraestructura
+
+ # 4. Prometheus: La base de datos de métricas
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: devops_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--storage.tsdb.retention.size=5GB'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml
+      - prometheus-data:/prometheus
+    networks:
+      - red-infraestructura
+    depends_on:
+      - cadvisor
+
+  # 5. Grafana: El panel de control visual
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: devops_grafana
+    restart: always
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+    ports:
+      - "3000:3000" # Entraremos por el puerto 3000
+    networks:
+      - red-infraestructura
+    depends_on:
+      - prometheus
+
+  # 6. Medición de disco real 
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: devops_node_exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+    networks:
+      - red-infraestructura
+
+ # 7. Simulador cpu conectado directamente a docker
+  simulador:
+    build: .
+    container_name: devops_simuladorcpu
+    restart: always
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: mi_app_db
+    depends_on:
+      - db
+    networks:
+      - red-infraestructura
+
+# Red interna para que los contenedores se comuniquen de forma segura
+networks:
+  red-infraestructura:
+    driver: bridge
+
+
+volumes:
+  postgres-data:
+  prometheus-data:

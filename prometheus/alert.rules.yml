@@ -1,0 +1,20 @@
+groups:
+  - name: AlertasInfraestructura
+    rules:
+      - alert: ServidorCaido
+        expr: up{job="node_exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El servidor de node_exporter está caído"
+          description: "Prometheus ha perdido la conexión con node_exporter hace más de 1 minuto."
+
+      - alert: ContenedorGrafanaCaido
+        expr: up{job="grafana"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Grafana no responde"
+          description: "El contenedor de Grafana parece estar caído o inaccesible."

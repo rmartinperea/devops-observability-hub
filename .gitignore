@@ -1,0 +1,12 @@
+# Base de datos y datos locales de Grafana (Opción 1)
+grafana/data/
+postgres-data/
+pgadmin-data/
+
+# ¡SEGURIDAD! Nunca subas tus contraseñas o tokens a GitHub
+.env
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+*.log
