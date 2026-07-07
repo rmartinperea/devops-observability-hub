@@ -1,80 +1,87 @@
 #  DevOps Observability Hub: Laboratorio de Monitoreo & Hardening
 
-Este es un laboratorio local de **Infraestructura como Código (IaC)** y **Observabilidad**. Está diseñado para simular cómo funciona el monitoreo de servidores en el mundo real, manejando bases de datos relacionales, telemetría automática y, lo más importante, aplicando capas de seguridad para proteger el entorno contra accesos no autorizados.
+Este es un laboratorio local de **Infraestructura como Código (IaC)** y **Observabilidad**. Está diseñado para simular cómo funciona el monitoreo de servidores y bases de datos en el mundo real, manejando telemetría automática, persistencia real de datos y aplicando capas de seguridad para proteger el entorno contra accesos no autorizados.
 
 ---
 
 ##  Arquitectura del Sistema
 
-El proyecto levanta un ecosistema de **7 microservicios** totalmente interconectados a través de una red privada virtual de Docker (`red-infraestructura`). 
+El proyecto levanta un ecosistema de **7 servicios** totalmente interconectados a través de una red privada virtual de Docker (`red-infraestructura`). 
 
-Para proteger los datos sensibles, **he aislado la red por dentro**, lo que significa que los servicios hablan entre sí en secreto y el único que da la cara al exterior es Grafana.
+Para proteger los datos sensibles, **hemos aislado la red por dentro**, lo que significa que los servicios hablan entre sí en secreto y los únicos puntos expuestos al exterior de forma segura son Grafana y pgAdmin.
 
 ```text
-       [ Navegador Web ]
-               │  (Puerto 3000 protegido / Grafana)
-               ▼
-      ┌────────────────────────────────────────────────────────┐
-      │                   RED DE DOCKER PRIVADA                │
-      │                                                        │
-      │   ┌───────────────┐        ┌───────────────────────┐   │
-      │   │    Grafana    │◄───────┤ Prometheus (Métricas) │   │
-      │   └───────────────┘        └───────────┬───────────┘   │
-      │                                        │               │
-      │         ┌──────────────────────────────┼───────────┐   │
-      │         ▼                              ▼           ▼   │
-      │  ┌───────────────┐              ┌─────────────┐ ┌─────────────┐
-      │  │  PostgreSQL   │              │  cAdvisor   │ │Node Exporter│
-      │  │ (Transacciones│              │(Contenedores)││  (Host/Red) │
-      │  └──────▲────────┘              └─────────────┘ └─────────────┘
-      │         │                                              │
-      │  ┌──────┴────────┐                                     │
-      │  │ Simulador CPU │ (Inyección de Picos)                │
-      │  └───────────-───┘                                     │
-      └────────────────────────────────────────────────────────┘
+       [ Navegador Web ] ───► (Puerto 8080/80) ───► [ pgAdmin (Gestión) ]
+               │                                           │
+               │ (Puerto 3000 protegido)                   ▼
+               ▼                                   [ PostgreSQL (Datos) ]
+       [ Grafana (Pintor) ]                                ▲
+               ▲                                           │
+               │ (Conexión de Red Interna)                 │ (Métricas SQL)
+               │                                           │
+       [ Prometheus (Cerebro) ] ◄────────────────── [ Postgres Exporter ]
+               ▲            ▲            ▲
+               │            │            │
+         (Métricas)     (Métricas)   (Métricas)
+               │            │            │
+         ┌─────┴─────┐┌─────┴─────┐┌─────┴─────┐
+         │Node Export││ cAdvisor  ││Simulador  │
+         │ (Host/Red)││(Contened.)││ CPU (Bash)│
+         └───────────┘└───────────┘└───────────┘
 ```
 
-### Componentes de la Infraestructura
+###  Componentes de la Infraestructura
 
-1. **Capa de Visualización (Grafana):** Nuestro panel de control centralizado. Es el único punto expuesto hacia tu máquina y se conecta con un bot de **Slack (ChatOps)** para avisar al equipo al instante si algo falla.
-2. **Motor de Telemetría (Prometheus):** La base de datos de series temporales (TSDB) que traga e indexa todas las métricas de rendimiento.
-3. **Capa de Datos (PostgreSQL + pgAdmin):** Almacenamiento persistente que simula la base de datos de negocio de una empresa real.
-4. **Simulador Autónomo de Estrés (Bash + Dockerfile):** Un microservicio programado por nosotros que corre de fondo inyectando picos de CPU al 99% y caídas de servicio (`DOWN`) para poner a prueba las alertas.
-5. **Agentes de Recolección (cAdvisor + Node Exporter):** Los ojos del sistema. `cAdvisor` vigila el consumo interno de cada contenedor y `Node Exporter` mide el tráfico de red general.
+1. **Capa de Visualización (Grafana):** Nuestro panel de control centralizado. Es el punto de control expuesto y está conectado mediante un webhook directo con un bot de **Slack (ChatOps)** para alertar al equipo al instante en caso de incidentes.
+2. **Motor de Telemetría (Prometheus):** Que lee, almacena e indexa todas las métricas de rendimiento y reglas de alerta.
+3. **Capa de Datos (PostgreSQL):** Almacenamiento persistente que simula la base de datos transaccional de negocio de una empresa real (`mi_app_db`).
+4. **Capa de Gestión de Datos (pgAdmin):** Para editar y lanzar consultas SQL a la base de datos de forma gráfica sin usar la terminal [c8b2189b-0985-4317-a333-43d8251de7ae].
+5. **Agentes de Recolección (Los Traductores):**
+   * **Node Exporter:** Con el que medimos la salud del hardware general (CPU, RAM, discos de la máquina).
+   * **cAdvisor:** Vigila el consumo de recursos de cada contenedor de Docker de forma individual.
+   * **Postgres Exporter:** Se conecta internamente a PostgreSQL para extraer estadísticas de rendimiento y consultas [c8b2189b-0985-4317-a333-43d8251de7ae].
+6. **Simulador Autónomo de Estrés (Bash + Dockerfile):** Un microservicio programado que inyecta picos de carga y caídas simuladas para auditar las alertas de Slack.
 
 ---
 
 ##  Buenas Prácticas de Seguridad Implementadas (Hardening)
 
-Un error típico es dejar todos los puertos abiertos. En este laboratorio he blindado la seguridad con estándares corporativos:
-
-* **Principio de Menor Privilegio (Bloqueo de Puertos):** Borramos las directivas `ports` hacia el exterior en PostgreSQL, Prometheus, cAdvisor y Node Exporter. Todo el tráfico viaja aislado por la red de Docker.
-* **Protección contra Llenado de Disco (Anti-DoS):** Limitamos por comandos la retención de Prometheus (`--storage.tsdb.retention.size=5GB` y `7d`). Así evitamos que un ataque o un bug llene el disco duro del servidor y tumbe el sistema [^1].
-
----
-
-##  Métricas Clave Diseñadas (PromQL & SQL)
-
-Para que los paneles de Grafana he diseñado las siguientes gráficas interactivas:
-
-* **Velocidad de Escritura en Disco por Contenedores (MB/s):**
-Como los entornos virtuales a veces bloquean las métricas de disco tradicionales, he usado esta fórmula inteligente que aprovecha cAdvisor para medir los Megabytes reales que escriben tus contenedores por segundo:
-  ```promql
-  sum(rate(container_fs_writes_bytes_total[5m])) / 1024 / 1024
-  ```
-* **Estado de Salud de los Nodos (Up/Down):**
-  Consulta para comprobar en tiempo real qué contenedores están vivos (`1`) y cuáles han caído (`0`):
-  ```promql
-  up
-  ```
+* **Principio de Menor Privilegio (Bloqueo de Puertos):** Se han eliminado las directivas `ports` externas en PostgreSQL, Prometheus, cAdvisor y Node Exporter. Todo el tráfico viaja aislado por la red interna de Docker. El exterior solo ve las interfaces de gestión (Grafana y pgAdmin).
+* **Protección contra Llenado de Disco (Anti-DoS):** Limitamos la retención de Prometheus mediante comandos explícitos (`--storage.tsdb.retention.size=5GB`) para evitar corrupciones de disco.
+* **Persistencia Segura No-Root:** Se ha configurado la propiedad de los volúmenes locales mediante identificadores de usuario (`UID`) específicos de cada servicio para evitar fugas de permisos en el Host [c8b2189b-0985-4317-a333-43d8251de7ae]:
+  * Grafana mapeado al UID `472:472` [c8b2189b-0985-4317-a333-43d8251de7ae].
+  * pgAdmin mapeado al UID `5050:5050` [c8b2189b-0985-4317-a333-43d8251de7ae].
 
 ---
 
-##  Capacidades Demostradas en este Lab
+##  Métricas Clave Diseñadas (PromQL)
 
-* **Infraestructura como Código (IaC):** Despliegue limpio y repetible mediante Docker Compose, usando volúmenes persistentes para no perder datos al apagar.
-* **DNS Interno de Docker:** Conexión segura entre servicios usando sus nombres de contenedor en lugar de IPs estáticas que cambian todo el tiempo.
-* **Gestión de Incidentes:** Simulación real de picos de carga (Thresholds) y caídas de servidores para configurar alertas visuales inteligentes en color.
+Para rescatar los paneles de la comunidad obsoletos y adaptarlos a las etiquetas de contenedores locales, se han diseñado y refactorizado las siguientes consultas de telemetría [c8b2189b-0985-4317-a333-43d8251de7ae]:
+
+* **Consumo de CPU por Contenedor Individual (%):**
+  Aprovecha cAdvisor para calcular la tasa de uso de CPU filtrada por la variable de selección de Grafana:
+  ```promql
+  sum(rate(container_cpu_usage_seconds_total{name=~"\$container"}[5m])) by (name) * 100
+  ```
+* **Uso de Memoria RAM Real por Contenedor (MB):**
+  Transforma los bytes puros recopilados por cAdvisor a Megabytes reales legibles por el Sysadmin:
+  ```promql
+  sum(container_memory_usage_bytes{name=~"\$container"}) by (name) / 1024 / 1024
+  ```
+* **Detección de Caídas e Intercepción de Alertas:**
+  Consulta puente que permite a Grafana vigilar si el motor de Prometheus tiene alguna regla activa en estado crítico (`firing`) para disparar el Bot de Slack [c8b2189b-0985-4317-a333-43d8251de7ae]:
+  ```promql
+  ALERTS{alertname="ServidorCaido", alertstate="firing"}
+  ```
+
+---
+
+##  Configuración del Sistema de Alertas (ChatOps con Slack)
+
+El laboratorio cuenta con un sistema de alertas en tiempo real optimizado para entornos de desarrollo. Se ha configurado la **Política de Notificaciones por Defecto (Default Policy)** con tiempos de espera reducidos para garantizar avisos inmediatos ante fallos [c8b2189b-0985-4317-a333-43d8251de7ae]:
+* **Group wait:** `2s` (Espera inicial antes de enviar la primera alerta a Slack) [c8b2189b-0985-4317-a333-43d8251de7ae].
+* **Group interval:** `5s` (Tiempo de respuesta para agrupar nuevos incidentes) [c8b2189b-0985-4317-a333-43d8251de7ae].
+* **Comportamiento No-Data:** Configurado en `OK` para mitigar falsos positivos por micro-cortes o silencios en las métricas estables [c8b2189b-0985-4317-a333-43d8251de7ae].
 
 ---
 
@@ -82,29 +89,35 @@ Como los entornos virtuales a veces bloquean las métricas de disco tradicionale
 
 ### Requisitos Previos
 * Docker y Docker Compose instalados.
-* Funciona perfectamente en entornos Linux o **WSL2 (Windows Subsystem for Linux)** [^1].
+* Compatible con Linux y **WSL2 (Windows Subsystem for Linux)**.
 
-### Instrucciones
-1. Clona este repositorio en tu máquina:
-   ```bash
-   git clone https://github.com
-   cd devops-observability-hub
-   ```
-2. Compila el simulador y levanta toda la infraestructura blindada en segundo plano con un solo comando:
+### Instrucciones de Preparación de Persistencia
+Antes de levantar los servicios, debes crear las carpetas de datos en tu proyecto y asignarles los permisos de los usuarios internos de los contenedores para garantizar la persistencia de tus paneles y conexiones [c8b2189b-0985-4317-a333-43d8251de7ae]:
+```bash
+# 1. Crear directorios para persistencia de datos
+mkdir -p grafana/data pgadmin-data postgres-data
+
+# 2. Asignar los permisos correspondientes (UIDs oficiales)
+sudo chown -R 472:472 ./grafana/data
+sudo chown -R 5050:5050 ./pgadmin-data
+```
+
+### Ejecución
+1. Levanta toda la infraestructura blindada en segundo plano con un solo comando:
    ```bash
    docker compose up -d --remove-orphans
    ```
-3. Entra a tu navegador y disfruta del monitoreo:
-   * **Grafana (Paneles):** `http://localhost:3000` (Usuario/Contraseña por defecto: `admin` / `admin`)
-   * *(Nota: Intentar entrar a Prometheus en el puerto 9090 o cAdvisor en el 8080 dará conexión rechazada debido al bloqueo de seguridad implementado).*
-  
-  
-   ##  Solución de Problemas Frecuentes (Troubleshooting)
-
-* **¿Por qué las métricas de disco de Node Exporter dan "No Data" en WSL/Windows?**
-  WSL2 aísla el sistema de archivos mediante hipervisores, impidiendo que los contenedores accedan a las métricas del host directamente. En este laboratorio mitigamos este comportamiento sustituyendo la métrica tradicional por telemetría nativa de contenedores mediante **cAdvisor** (`container_fs_writes_bytes_total`).
-* **Grafana da error al conectar con Prometheus:**
-  Asegúrate de que la URL en el Data Source de Grafana sea `http://devops_prometheus:9090`. No uses `localhost`, ya que dentro de la red interna de Docker, `localhost` apuntaría a la propia Grafana.
-
+2. Acceso a las aplicaciones desde tu navegador:
+   * **Grafana (Monitoreo & Alertas):** `http://localhost:3000` (`admin` / `admin`)
+   * **pgAdmin (Gestión SQL):** `http://localhost:8080` (Usa tu correo/clave del Compose)
 
 ---
+
+##  Solución de Problemas Frecuentes (Troubleshooting)
+
+* **¿Por qué los paneles de cAdvisor muestran "No Data" al importarlos?**
+  Las plantillas comunitarias suelen buscar etiquetas de Docker empresariales como `container_label_com_docker_compose_service`. En este laboratorio solucionamos este problema editando las variables del panel en Grafana y reescribiendo la consulta nativa a `label_values(container_last_seen, name)` [c8b2189b-0985-4317-a333-43d8251de7ae].
+* **pgAdmin da error `failed to resolve host` al intentar conectar con PostgreSQL:**
+  Estás intentar usar `localhost` o el nombre de la base de datos como dirección del servidor. Dentro de la red interna de Docker debes usar el nombre del servicio definido en el `docker-compose.yml`, que es **`db`** [c8b2189b-0985-4317-a333-43d8251de7ae].
+* **El bot de Slack envía alertas con valor `[no value]` de forma aleatoria:**
+  Es el comportamiento `No Data` de Grafana [c8b2189b-0985-4317-a333-43d8251de7ae]. Se soluciona editando la regla de alerta en la interfaz web de Grafana y cambiando el campo *"Alert state if no data"* de `No Data` a `OK` [c8b2189b-0985-4317-a333-43d8251de7ae].
