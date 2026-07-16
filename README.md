@@ -27,15 +27,15 @@ El objetivo principal es entender cómo diferentes servicios pueden comunicarse 
        Navegador
            │
    ┌───────┴────────┐
-   │                │
-   ▼                ▼
- Grafana         pgAdmin
-   │                │
-   ▼                ▼
- Prometheus    PostgreSQL
-      │              ▲
-      │              │
-      ├──────────────┘
+   │                   │
+   ▼                  ▼
+ Grafana            pgAdmin
+   │                  │
+   ▼                  ▼
+ Prometheus        PostgreSQL
+      │               ▲
+      │               │
+      ├─────────────┘
       │
       ├── Node Exporter
       ├── cAdvisor
